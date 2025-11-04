@@ -171,6 +171,11 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
     # for resources and tools
     
     try:
+        # Log verification that we're running from the local repository
+        server_path = os.path.abspath(__file__)
+        logger.info(f"BlenderMCP server starting up from local repository: {server_path}")
+        logger.info(f"Repository location: {os.path.dirname(os.path.dirname(server_path))}")
+        
         # Just log that we're starting up
         logger.info("BlenderMCP server starting up")
         
