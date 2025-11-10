@@ -409,15 +409,57 @@ class BlenderMCPServer:
             # Create a local namespace for execution
             namespace = {"bpy": bpy}
 
+            # Persist the snippet so artists can inspect it later in the text editor
+            text_name = self._store_executed_code(code)
+
             # Capture stdout during execution, and return it as result
             capture_buffer = io.StringIO()
             with redirect_stdout(capture_buffer):
                 exec(code, namespace)
 
             captured_output = capture_buffer.getvalue()
-            return {"executed": True, "result": captured_output}
+            return {"executed": True, "result": captured_output, "text_name": text_name}
         except Exception as e:
             raise Exception(f"Code execution error: {str(e)}")
+
+    def _store_executed_code(self, code: str) -> str:
+        """Append the delegated code snippet to a shared Blender text block."""
+        text_name = "MCP Delegated Code"
+        text_block = bpy.data.texts.get(text_name)
+
+        if text_block is None:
+            text_block = bpy.data.texts.new(name=text_name)
+
+        # Move cursor to end before writing (API changed in Blender 4.x)
+        if text_block.lines:
+            last_index = len(text_block.lines) - 1
+            last_char = len(text_block.lines[-1].body)
+            text_block.cursor_set(line=last_index, character=last_char)
+
+        separator = "\n########\n"
+        snippet = code if code.endswith("\n") else f"{code}\n"
+
+        # Add separator if the text block already has content
+        if text_block.lines and any(line.body.strip() for line in text_block.lines):
+            text_block.write(separator)
+
+        text_block.write(snippet)
+
+        # If there is an open Text Editor, make the shared block active for convenience
+        try:
+            screen = bpy.context.screen
+            if screen is not None:
+                for area in screen.areas:
+                    if area.type == 'TEXT_EDITOR':
+                        for space in area.spaces:
+                            if space.type == 'TEXT_EDITOR':
+                                space.text = text_block
+                                break
+        except Exception:
+            # Failing to focus the text editor should not block the operation
+            pass
+
+        return text_block.name
 
 
 
