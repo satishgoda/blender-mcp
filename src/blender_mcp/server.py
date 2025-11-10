@@ -332,7 +332,12 @@ def execute_blender_code(ctx: Context, code: str) -> str:
         # Get the global connection
         blender = get_blender_connection()
         result = blender.send_command("execute_code", {"code": code})
-        return f"Code executed successfully: {result.get('result', '')}"
+        output = result.get("result", "")
+        text_name = result.get("text_name")
+        message = f"Code executed successfully: {output}"
+        if text_name:
+            message += f"\nSnippet stored in Blender Text block: {text_name}"
+        return message
     except Exception as e:
         logger.error(f"Error executing code: {str(e)}")
         return f"Error executing code: {str(e)}"
